@@ -1,11 +1,6 @@
 """
 iRacing Data API authentication.
 Maintains a single requests.Session with valid cookies.
-
-iRacing requires:
-  1. A GET to the members site first (sets initial cookies)
-  2. A POST to /auth with browser-like headers and hashed password
-  3. Cookies are then valid for ~24 hours
 """
 import base64
 import hashlib
@@ -18,8 +13,7 @@ from config import IRACING_BASE
 
 log = logging.getLogger(__name__)
 
-# iRacing expects requests that look like they come from a browser
-_BROWSER_HEADERS = {
+_HEADERS = {
     'User-Agent':   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
                     '(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
     'Accept':       'application/json, text/plain, */*',
@@ -30,72 +24,87 @@ _BROWSER_HEADERS = {
 
 
 def _hash_password(email: str, password: str) -> str:
-    """iRacing expects base64(sha256(password + email.lower()))."""
     combined = (password + email.lower()).encode('utf-8')
     return base64.b64encode(hashlib.sha256(combined).digest()).decode('utf-8')
 
 
 class IRacingAuth:
-    """Wraps a requests.Session and keeps it authenticated."""
-
-    _AUTH_TTL = 23 * 3600   # re-auth after 23 hours
+    _AUTH_TTL = 23 * 3600
 
     def __init__(self):
         self._session = requests.Session()
-        self._session.headers.update(_BROWSER_HEADERS)
+        self._session.headers.update(_HEADERS)
         self._authed_at: float = 0.0
         self._ok = False
-
-    # ── public ────────────────────────────────────────────────────────────────
 
     @property
     def session(self) -> requests.Session:
         return self._session
 
     def ensure(self):
-        """Call before every API request."""
         if not self._ok or (time.time() - self._authed_at) > self._AUTH_TTL:
             self._login()
-
-    # ── private ───────────────────────────────────────────────────────────────
 
     def _login(self):
         email    = os.environ['IRACING_EMAIL']
         password = os.environ['IRACING_PASSWORD']
         pw_hash  = _hash_password(email, password)
 
-        # Prime the session with initial cookies from the members site
+        # Prime session cookies
         try:
             self._session.get('https://members.iracing.com/', timeout=15)
         except Exception:
-            pass  # Non-fatal — proceed to auth attempt
+            pass
 
         log.info('Authenticating with iRacing API...')
+
+        # Do NOT follow redirects automatically — requests converts POST→GET
+        # on 301/302 which causes 405. We re-POST to any redirect location.
         resp = self._session.post(
             f'{IRACING_BASE}/auth',
             json={'email': email, 'password': pw_hash},
             timeout=30,
+            allow_redirects=False,
         )
 
+        log.info(f'Auth response: {resp.status_code}  headers: {dict(resp.headers)}')
+        log.info(f'Auth body (first 500): {resp.text[:500]}')
+
+        # Follow redirect manually with POST
+        if resp.status_code in (301, 302, 303, 307, 308):
+            location = resp.headers.get('Location', '')
+            log.info(f'Auth redirected → {location}, re-POSTing...')
+            if location:
+                resp = self._session.post(
+                    location,
+                    json={'email': email, 'password': pw_hash},
+                    timeout=30,
+                    allow_redirects=False,
+                )
+                log.info(f'Post-redirect response: {resp.status_code}')
+                log.info(f'Post-redirect body: {resp.text[:500]}')
+
         if resp.status_code == 401:
-            raise RuntimeError(
-                'iRacing login failed — check IRACING_EMAIL and IRACING_PASSWORD'
-            )
+            raise RuntimeError('iRacing login failed — check IRACING_EMAIL and IRACING_PASSWORD')
         if resp.status_code == 429:
+            raise RuntimeError('iRacing rate-limited — wait a few minutes then retry')
+        if resp.status_code == 405:
             raise RuntimeError(
-                'iRacing rate-limited auth — too many login attempts, wait a few minutes'
+                f'iRacing returned 405 for auth POST. '
+                f'URL: {resp.url}  '
+                f'Headers returned: {dict(resp.headers)}'
             )
+
         resp.raise_for_status()
 
-        # iRacing sometimes returns 200 with an authcode indicating success/failure
         try:
             body = resp.json()
             if body.get('authcode') == 0:
                 raise RuntimeError(
-                    f'iRacing rejected credentials: {body.get("message", "unknown error")}'
+                    f'iRacing rejected credentials: {body.get("message", "unknown")}'
                 )
         except (ValueError, AttributeError):
-            pass  # Non-JSON response is fine if status was 200
+            pass
 
         self._ok        = True
         self._authed_at = time.time()
@@ -105,7 +114,6 @@ class IRacingAuth:
         self._ok = False
 
 
-# Module-level singleton — safe for single-worker/single-process deployment
 _auth = IRacingAuth()
 
 
