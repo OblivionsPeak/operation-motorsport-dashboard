@@ -23,7 +23,7 @@ def _safe_call(fn, *args, **kwargs):
 
 
 def get_league(league_id: int) -> dict:
-    result = _safe_call(_client().league, league_id)
+    result = _safe_call(_client().league_get, league_id)
     return result if isinstance(result, dict) else {}
 
 
