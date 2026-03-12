@@ -37,15 +37,22 @@ class IRacingAuth:
             warnings.simplefilter('ignore')   # suppress pydantic deprecation notice
             self._client = irDataClient(username=email, password=password)
 
-        # Force auth by making a lightweight call; result(1) is expected to fail
+        # Verify auth succeeded with a lightweight call
+        info = None
         try:
-            self._client.result(subsession_id=1)
-        except Exception:
-            pass
+            info = self._client.member_info()
+        except Exception as e:
+            raise RuntimeError(f'iRacing auth failed — member_info error: {e}') from e
+
+        if not info or not isinstance(info, dict) or not info.get('cust_id'):
+            raise RuntimeError(
+                'iRacing auth failed — empty response. '
+                'Possible causes: IP block (wait 15-30 min), wrong credentials, or 2FA required.'
+            )
 
         self._ok        = True
         self._authed_at = time.time()
-        log.info('iRacing authentication successful')
+        log.info('iRacing authentication successful (cust_id=%s)', info.get('cust_id'))
 
     def invalidate(self):
         self._ok    = False

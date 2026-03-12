@@ -24,6 +24,13 @@ log = logging.getLogger(__name__)
 
 app = Flask(__name__, static_folder='static', static_url_path='')
 
+# Initialise DB at import time so gunicorn workers pick it up without create_app().
+init_db()
+log.info('Database initialised')
+
+from sync.scheduler import start_scheduler
+start_scheduler()
+
 # Register API blueprints
 app.register_blueprint(standings_bp)
 app.register_blueprint(results_bp)
@@ -88,21 +95,6 @@ def debug():
     return j(info)
 
 
-# ── Startup ───────────────────────────────────────────────────────────────────
-
-def create_app():
-    init_db()
-    log.info('Database initialised')
-
-    # Only start scheduler when running as a real server (not during imports)
-    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
-        from sync.scheduler import start_scheduler
-        start_scheduler()
-
-    return app
-
-
 if __name__ == '__main__':
-    create_app()
     port = int(os.environ.get('PORT', 5055))
     app.run(host='0.0.0.0', port=port, debug=False)
