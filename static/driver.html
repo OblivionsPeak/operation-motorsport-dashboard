@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Driver | Operation Motorsport iRacing League</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="/" class="nav-logo">OPERATION <span>MOTORSPORT</span></a>
+    <ul class="nav-links">
+      <li><a href="/">Standings</a></li>
+      <li><a href="/results">Results</a></li>
+    </ul>
+  </nav>
+
+  <section class="driver-section">
+    <div class="container">
+
+      <a href="/" class="back-link">← Back to Standings</a>
+
+      <div id="driver-wrap">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Loading driver…</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>
+      <a href="https://operationmotorsport.org" target="_blank" rel="noopener">operationmotorsport.org</a>
+      &nbsp;·&nbsp; Data via iRacing Data API
+    </p>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/driver.js"></script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Results | Operation Motorsport iRacing League</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="/" class="nav-logo">OPERATION <span>MOTORSPORT</span></a>
+    <ul class="nav-links">
+      <li><a href="/">Standings</a></li>
+      <li><a href="/results" class="active">Results</a></li>
+    </ul>
+  </nav>
+
+  <header class="page-header">
+    <div class="container">
+      <p class="page-label">Season Results</p>
+      <h1 class="page-title">RACE RESULTS</h1>
+    </div>
+  </header>
+
+  <section class="results-section">
+    <div class="container">
+      <div id="results-wrap">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Loading results…</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>
+      <a href="https://operationmotorsport.org" target="_blank" rel="noopener">operationmotorsport.org</a>
+      &nbsp;·&nbsp; Data via iRacing Data API
+    </p>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/results.js"></script>
+</body>
+</html>

@@ -1,0 +1,417 @@
+/* ── Operation Motorsport Dashboard — Styles ─────────────────────────── */
+
+:root {
+  --bg:        #0c0c0c;
+  --surface:   #151515;
+  --surface2:  #1e1e1e;
+  --border:    #2a2a2a;
+  --accent:    #e85d04;
+  --accent-dk: #c04d03;
+  --text:      #f0f0f0;
+  --muted:     #888;
+  --green:     #4caf50;
+  --red:       #f44336;
+  --gold:      #ffd700;
+  --silver:    #c0c0c0;
+  --bronze:    #cd7f32;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Layout ──────────────────────────────────────────────────────────────── */
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ── Nav ─────────────────────────────────────────────────────────────────── */
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(12, 12, 12, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nav-logo {
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  font-size: 1.25rem;
+  letter-spacing: 0.05em;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.nav-logo span { color: var(--accent); }
+
+.nav-links {
+  display: flex;
+  gap: 8px;
+  list-style: none;
+}
+
+.nav-links a {
+  display: block;
+  padding: 6px 14px;
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: color .15s, background .15s;
+  text-decoration: none;
+}
+
+.nav-links a:hover,
+.nav-links a.active { color: var(--text); background: var(--surface2); }
+
+/* ── Page Header ─────────────────────────────────────────────────────────── */
+
+.page-header {
+  padding: 48px 0 32px;
+  border-bottom: 1px solid var(--border);
+}
+
+.page-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.page-title {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.page-subtitle {
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+/* ── Cards ───────────────────────────────────────────────────────────────── */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+}
+
+/* ── Standings Table ─────────────────────────────────────────────────────── */
+
+.standings-section { padding: 40px 0; }
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.section-title {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.season-select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+thead th {
+  background: var(--surface2);
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+thead th:hover { color: var(--text); }
+thead th.sorted { color: var(--accent); }
+
+tbody tr {
+  border-top: 1px solid var(--border);
+  transition: background .1s;
+}
+tbody tr:hover { background: var(--surface2); }
+
+tbody td {
+  padding: 12px 16px;
+  white-space: nowrap;
+}
+
+.pos-cell { font-weight: 700; width: 48px; text-align: center; }
+.pos-1 { color: var(--gold); }
+.pos-2 { color: var(--silver); }
+.pos-3 { color: var(--bronze); }
+
+.driver-link {
+  font-weight: 600;
+  color: var(--text);
+}
+.driver-link:hover { color: var(--accent); text-decoration: none; }
+
+.car-num {
+  display: inline-block;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--muted);
+  margin-right: 8px;
+}
+
+.incident-high { color: var(--red); font-weight: 600; }
+.win-count     { color: var(--accent); font-weight: 700; }
+
+/* ── Results List ────────────────────────────────────────────────────────── */
+
+.results-section { padding: 40px 0; }
+
+.race-list { display: flex; flex-direction: column; gap: 12px; }
+
+.race-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 24px;
+  transition: border-color .15s;
+  text-decoration: none;
+  color: inherit;
+  gap: 16px;
+}
+
+.race-card:hover {
+  border-color: var(--accent);
+  text-decoration: none;
+}
+
+.race-card-left { display: flex; align-items: center; gap: 20px; }
+
+.race-num {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--border);
+  line-height: 1;
+  min-width: 40px;
+}
+
+.race-info-track {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.race-info-date { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+
+.race-card-right {
+  font-size: 0.875rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.race-card-arrow {
+  font-size: 1.25rem;
+  color: var(--muted);
+}
+
+/* ── Race Detail ─────────────────────────────────────────────────────────── */
+
+.race-section { padding: 40px 0; }
+.race-meta-bar {
+  display: flex; gap: 32px; flex-wrap: wrap;
+  padding: 16px 0 32px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 32px;
+}
+
+.race-meta-item { font-size: 0.875rem; }
+.race-meta-label { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.race-meta-value { font-weight: 600; margin-top: 2px; }
+
+/* ── Driver Profile ──────────────────────────────────────────────────────── */
+
+.driver-section { padding: 40px 0; }
+
+.driver-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 32px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.driver-name {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 700;
+}
+
+.driver-club { color: var(--muted); margin-top: 4px; }
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+}
+
+.stat-value {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent);
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ── Loading / Empty States ──────────────────────────────────────────────── */
+
+.loading, .empty-state {
+  text-align: center;
+  padding: 60px 24px;
+  color: var(--muted);
+}
+
+.spinner {
+  display: inline-block;
+  width: 32px; height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  margin-bottom: 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: 7px;
+  border: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .15s;
+  text-decoration: none;
+}
+.btn:hover { opacity: .85; text-decoration: none; }
+
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-ghost   { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+.btn-ghost:hover { color: var(--text); }
+
+/* ── Back link ───────────────────────────────────────────────────────────── */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.875rem;
+  padding: 12px 0 24px;
+}
+.back-link:hover { color: var(--text); text-decoration: none; }
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+.footer {
+  border-top: 1px solid var(--border);
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-top: 80px;
+}
+
+.footer a { color: var(--muted); }
+.footer a:hover { color: var(--text); }
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .nav-links { gap: 2px; }
+  .nav-links a { padding: 6px 10px; font-size: 0.8rem; }
+  .race-card { flex-direction: column; align-items: flex-start; }
+  .table-wrap { font-size: 0.8rem; }
+  thead th, tbody td { padding: 10px 10px; }
+}
