@@ -1,64 +1,44 @@
 """
-Raw iRacing auth diagnostic — bypasses iracingdataapi to see exact HTTP response.
+iRacing OAuth2 auth test (password_limited grant).
 Run: python test_auth_raw.py
+
+Requires IRACING_CLIENT_ID and IRACING_CLIENT_SECRET in .env
+Register at: https://oauth.iracing.com/accountmanagement
 """
-import os, hashlib, base64, json
-import requests
+import os, json
 from dotenv import load_dotenv
+from iracing.client import IRacingClient
+
 load_dotenv()
 
-email    = os.environ.get('IRACING_EMAIL', '').strip()
-password = os.environ.get('IRACING_PASSWORD', '').strip()
+username      = os.environ.get('IRACING_EMAIL', '').strip()
+password      = os.environ.get('IRACING_PASSWORD', '').strip()
+client_id     = os.environ.get('IRACING_CLIENT_ID', '').strip()
+client_secret = os.environ.get('IRACING_CLIENT_SECRET', '').strip()
 
-# iRacing password hashing: base64( sha256(password + email.lower()) )
-pw_hash = base64.b64encode(
-    hashlib.sha256((password + email.lower()).encode('utf-8')).digest()
-).decode('utf-8')
+if not client_id or client_id == 'your_client_id_here':
+    print('ERROR: IRACING_CLIENT_ID not set in .env')
+    print('Register at: https://oauth.iracing.com/accountmanagement')
+    exit(1)
 
-print(f'Email:    {email}')
-print(f'PW hash:  {pw_hash[:8]}... (first 8 chars shown)')
+print(f'Email:     {username}')
+print(f'Client ID: {client_id}')
 print()
 
-session = requests.Session()
-session.headers.update({
-    'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-    'Accept':          'application/json, text/plain, */*',
-    'Accept-Language': 'en-US,en;q=0.9',
-    'Content-Type':    'application/json',
-    'Origin':          'https://www.iracing.com',
-    'Referer':         'https://www.iracing.com/',
-})
+client = IRacingClient()
+print('Attempting OAuth2 login (password_limited)...')
+ok = client.login(username, password, client_id, client_secret)
 
-print('POSTing to https://members-ng.iracing.com/auth ...')
-try:
-    r = session.post(
-        'https://members-ng.iracing.com/auth',
-        json={'email': email, 'password': pw_hash},
-        timeout=15,
-    )
-    print(f'Status:  {r.status_code}')
-    print(f'Headers: {dict(r.headers)}')
-    print(f'Body:    {repr(r.text[:500])}')
-    print()
-
-    if r.status_code == 200:
-        try:
-            data = r.json()
-            print(f'JSON: {json.dumps(data, indent=2)[:500]}')
-            if data.get('authcode') == 0:
-                print('\nAUTH FAILED -- authcode=0 means wrong password or account issue.')
-            elif data.get('authcode'):
-                print(f'\nAUTH SUCCEEDED -- authcode={data["authcode"]}')
-            else:
-                print(f'\nUnexpected response shape: {data}')
-        except Exception as e:
-            print(f'Could not parse JSON: {e}')
-    elif r.status_code == 401:
-        print('401 -- Wrong credentials.')
-    elif r.status_code == 405:
-        print('405 -- CloudFront still blocking this IP.')
-    else:
-        print(f'Unexpected status {r.status_code}')
-
-except Exception as e:
-    print(f'Request failed: {e}')
+if ok:
+    print('LOGIN SUCCEEDED')
+    print('Fetching member_info...')
+    try:
+        info = client.member_info()
+        print(f'cust_id:      {info.get("cust_id")}')
+        print(f'display_name: {info.get("display_name")}')
+        print()
+        print('Auth is working! The dashboard will sync data automatically.')
+    except Exception as e:
+        print(f'member_info failed: {e}')
+else:
+    print('LOGIN FAILED — check client credentials')

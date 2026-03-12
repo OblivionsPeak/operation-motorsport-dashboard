@@ -1,65 +1,133 @@
 """
-Low-level iRacing API client.
-Handles GET requests, auto-retry on 401, and S3 link-following.
+iRacing Data API client using OAuth2 "password_limited" grant.
+Requires a registered OAuth client from https://oauth.iracing.com/accountmanagement
 """
+import hashlib
+import base64
+import time
 import logging
-import requests
-from config import IRACING_BASE
-from iracing.auth import get_auth
+
+from curl_cffi import requests as curl_requests
 
 log = logging.getLogger(__name__)
 
-
-def _follow_s3(session: requests.Session, link: str) -> dict | list:
-    """Fetch an S3 pre-signed URL and handle chunked responses."""
-    resp = session.get(link, timeout=60)
-    resp.raise_for_status()
-    data = resp.json()
-
-    # Some endpoints wrap data in {"data": {...}} with chunk_info
-    if isinstance(data, dict) and 'data' in data:
-        inner = data['data']
-        if isinstance(inner, dict) and 'chunk_info' in inner:
-            chunk_info = inner['chunk_info']
-            base_url   = chunk_info.get('base_download_url', '')
-            chunks     = chunk_info.get('chunk_file_names', [])
-            rows: list = []
-            for fname in chunks:
-                cr = session.get(base_url + fname, timeout=60)
-                cr.raise_for_status()
-                rows.extend(cr.json())
-            inner['rows'] = rows
-        return inner
-
-    return data
+OAUTH_TOKEN_URL = 'https://oauth.iracing.com/oauth2/token'
+DATA_BASE       = 'https://members-ng.iracing.com'
 
 
-def api_get(path: str, params: dict | None = None) -> dict | list:
-    """
-    GET {IRACING_BASE}{path}, following the S3 link pattern if present.
-    Auto-retries once on 401.
-    """
-    auth = get_auth()
-    auth.ensure()
+def _mask(value: str, identifier: str) -> str:
+    """iRacing masking: base64(sha256(value + identifier.lower()))"""
+    return base64.b64encode(
+        hashlib.sha256((value + identifier.lower()).encode('utf-8')).digest()
+    ).decode('utf-8')
 
-    for attempt in range(2):
-        resp = auth.session.get(
-            f'{IRACING_BASE}{path}',
-            params=params,
-            timeout=30,
+
+class IRacingClient:
+    """iRacing Data API client using OAuth2 password_limited grant."""
+
+    def __init__(self):
+        self._session       = curl_requests.Session(impersonate='chrome124')
+        self._access_token  = None
+        self._refresh_token = None
+        self._expires_at    = 0.0
+        self.authenticated  = False
+
+    def login(self, username: str, password: str, client_id: str, client_secret: str) -> bool:
+        """Obtain tokens using the password_limited grant."""
+        data = {
+            'grant_type':    'password_limited',
+            'client_id':     client_id,
+            'client_secret': _mask(client_secret, client_id),
+            'username':      username,
+            'password':      _mask(password, username),
+            'scope':         'iracing.auth',
+        }
+        r = self._session.post(OAUTH_TOKEN_URL, data=data)
+        r.raise_for_status()
+        tokens = r.json()
+
+        if 'access_token' not in tokens:
+            log.error('OAuth token response missing access_token: %s', tokens)
+            return False
+
+        self._access_token  = tokens['access_token']
+        self._refresh_token = tokens.get('refresh_token')
+        self._expires_at    = time.time() + tokens.get('expires_in', 600) - 30
+        self.authenticated  = True
+        log.info('iRacing OAuth login succeeded, token expires in %ss', tokens.get('expires_in'))
+        return True
+
+    def refresh(self) -> bool:
+        """Use refresh_token to get a new access_token."""
+        if not self._refresh_token:
+            return False
+        data = {
+            'grant_type':    'refresh_token',
+            'refresh_token': self._refresh_token,
+        }
+        r = self._session.post(OAUTH_TOKEN_URL, data=data)
+        if r.status_code != 200:
+            log.warning('Token refresh failed (%s), will re-login', r.status_code)
+            self.authenticated = False
+            return False
+        tokens = r.json()
+        self._access_token  = tokens['access_token']
+        self._refresh_token = tokens.get('refresh_token', self._refresh_token)
+        self._expires_at    = time.time() + tokens.get('expires_in', 600) - 30
+        log.info('iRacing token refreshed')
+        return True
+
+    def _ensure_token(self):
+        if time.time() >= self._expires_at:
+            self.refresh()
+
+    def _get(self, path: str, **params) -> dict | list:
+        self._ensure_token()
+        headers = {'Authorization': f'Bearer {self._access_token}'}
+        r = self._session.get(f'{DATA_BASE}{path}', params=params, headers=headers)
+        r.raise_for_status()
+        data = r.json()
+        # iRacing returns S3 pre-signed links for large payloads
+        if isinstance(data, dict) and 'link' in data:
+            r2 = self._session.get(data['link'])
+            r2.raise_for_status()
+            return r2.json()
+        return data
+
+    # ── API methods ───────────────────────────────────────────────────────────
+
+    def member_info(self) -> dict:
+        return self._get('/data/member/info')
+
+    def league_get(self, league_id: int) -> dict:
+        return self._get('/data/league/get', league_id=league_id)
+
+    def league_seasons(self, league_id: int, include_series: bool = False) -> dict:
+        return self._get(
+            '/data/league/seasons',
+            league_id=league_id,
+            include_series=int(include_series),
         )
-        if resp.status_code == 401 and attempt == 0:
-            log.warning('Got 401 — re-authenticating')
-            auth.invalidate()
-            auth.ensure()
-            continue
-        resp.raise_for_status()
-        break
 
-    data = resp.json()
+    def league_season_standings(self, league_id: int, season_id: int) -> dict:
+        return self._get(
+            '/data/league/season_standings',
+            league_id=league_id,
+            season_id=season_id,
+        )
 
-    # Follow S3 link if the response just contains {"link": "..."}
-    if isinstance(data, dict) and 'link' in data and len(data) <= 3:
-        return _follow_s3(auth.session, data['link'])
+    def league_season_sessions(
+        self,
+        league_id: int,
+        season_id: int,
+        results_only: bool = False,
+    ) -> dict:
+        return self._get(
+            '/data/league/season_sessions',
+            league_id=league_id,
+            season_id=season_id,
+            results_only=int(results_only),
+        )
 
-    return data
+    def result(self, subsession_id: int) -> dict:
+        return self._get('/data/results/get', subsession_id=subsession_id)
