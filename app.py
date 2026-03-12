@@ -4,6 +4,7 @@ Flask app entry point.
 """
 import logging
 import os
+import traceback
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -47,6 +48,44 @@ def race_page(subsession_id: int):
 @app.get('/driver/<int:cust_id>')
 def driver_page(cust_id: int):
     return send_from_directory('static', 'driver.html')
+
+
+@app.get('/api/debug')
+def debug():
+    """Health check — shows DB state, env vars, and any errors."""
+    from flask import jsonify as j
+    import db.queries as q
+    from config import LEAGUE_ID, DB_PATH
+
+    info = {
+        'db_path':        DB_PATH,
+        'db_exists':      os.path.exists(DB_PATH),
+        'league_id':      LEAGUE_ID,
+        'iracing_email':  os.environ.get('IRACING_EMAIL', 'NOT SET'),
+        'iracing_pw_set': bool(os.environ.get('IRACING_PASSWORD')),
+    }
+
+    try:
+        info['seasons'] = q.get_seasons(LEAGUE_ID)
+    except Exception as e:
+        info['seasons_error'] = str(e)
+
+    try:
+        info['last_season_sync']   = q.get_meta('last_season_sync')
+        info['last_standings_sync'] = q.get_meta('last_standings_sync')
+    except Exception as e:
+        info['meta_error'] = str(e)
+
+    try:
+        from iracing.auth import get_auth
+        auth = get_auth()
+        auth.ensure()
+        info['iracing_auth'] = 'OK'
+    except Exception as e:
+        info['iracing_auth'] = f'FAILED: {e}'
+        info['iracing_auth_trace'] = traceback.format_exc()
+
+    return j(info)
 
 
 # ── Startup ───────────────────────────────────────────────────────────────────
